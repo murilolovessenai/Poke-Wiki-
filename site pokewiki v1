@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokéWiki - A Enciclopédia Pokémon</title>
+    <style>
+        /* =========================================================
+           TEMAS CUSTOMIZADOS
+           ========================================================= */
+        :root {
+            /* Tema Padrão: Pikachu */
+            --bg-body: #fde047;
+            --bg-card: #ffffff;
+            --bg-folder: #fef08a;
+            --text-main: #1e293b;
+            --text-muted: #475569;
+            --accent: #ef4444; /* Vermelho bochecha */
+            --accent-hover: #dc2626;
+            --border: #eab308;
+            --wiki-infobox: #f8fafc;
+        }
+
+        [data-theme="umbreon"] {
+            --bg-body: #121212;
+            --bg-card: #27272a;
+            --bg-folder: #18181b;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent: #fbbf24; /* Amarelo anéis */
+            --accent-hover: #f59e0b;
+            --border: #3f3f46;
+            --wiki-infobox: #3f3f46;
+        }
+
+        [data-theme="rotom"] {
+            --bg-body: #ef4444; /* Vermelho Rotom */
+            --bg-card: #ffffff;
+            --bg-folder: #fca5a5;
+            --text-main: #1e293b;
+            --text-muted: #475569;
+            --accent: #38bdf8; /* Azul plasma */
+            --accent-hover: #0284c7;
+            --border: #b91c1c;
+            --wiki-infobox: #f1f5f9;
+        }
+
+        /* =========================================================
+           ESTILOS GERAIS
+           ========================================================= */
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0; padding: 0;
+            transition: background-color 0.4s, color 0.4s;
+        }
+
+        header {
+            padding: 1.5rem; text-align: center;
+            background: var(--bg-card);
+            border-bottom: 4px solid var(--accent);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 { margin: 0; font-size: 2.5rem; color: var(--text-main); display: flex; align-items: center; justify-content: center; gap: 10px;}
+        header h1 span { color: var(--accent); }
+
+        .theme-selector {
+            margin-top: 1rem; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+        }
+
+        .theme-btn {
+            padding: 0.5rem 1.5rem; border: 2px solid var(--border);
+            border-radius: 20px; cursor: pointer; font-weight: bold;
+            background: var(--bg-card); color: var(--text-main);
+            transition: 0.2s transform, 0.2s background;
+        }
+        .theme-btn:hover { transform: translateY(-2px); }
+        .theme-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+        main { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+
+        /* ESTILO DE PASTAS (TABS) */
+        .folders {
+            display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: -1px;
+        }
+        .folder-tab {
+            background: var(--bg-folder); border: 2px solid var(--border); border-bottom: none;
+            padding: 10px 20px; border-radius: 10px 10px 0 0; cursor: pointer;
+            font-weight: bold; color: var(--text-main); transition: 0.3s;
+        }
+        .folder-tab.active { background: var(--bg-card); border-top: 4px solid var(--accent); padding-bottom: 12px; z-index: 10; position: relative;}
+
+        .folder-content {
+            background: var(--bg-card); border: 2px solid var(--border);
+            border-radius: 0 10px 10px 10px; padding: 2rem;
+            min-height: 50vh;
+        }
+
+        /* GRID POKÉMON */
+        .pokemon-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1.5rem;
+        }
+
+        .poke-card {
+            background: var(--bg-body); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1rem; text-align: center; cursor: pointer;
+            transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .poke-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: var(--accent); }
+        .poke-card img { width: 100px; height: 100px; object-fit: contain; }
+        .poke-id { font-size: 0.8rem; color: var(--text-muted); font-weight: bold; }
+        .poke-name { text-transform: capitalize; margin: 0.5rem 0 0 0; font-size: 1.1rem; }
+
+        .loading { text-align: center; font-size: 1.2rem; font-weight: bold; width: 100%; grid-column: 1/-1; padding: 3rem 0; }
+
+        /* MODAL ESTILO WIKIPEDIA */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; padding: 1rem;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .wiki-article {
+            background: var(--bg-card); width: 100%; max-width: 900px; max-height: 90vh;
+            border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .wiki-header {
+            padding: 1rem 2rem; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .wiki-header h2 { margin: 0; text-transform: capitalize; font-size: 2rem; border-bottom: 2px solid var(--text-muted); padding-bottom: 5px;}
+        .close-btn { background: none; border: none; font-size: 2rem; color: var(--text-main); cursor: pointer; }
+
+        .wiki-body { display: flex; flex-wrap: wrap; padding: 2rem; gap: 2rem; overflow-y: auto; }
+
+        .wiki-content { flex: 2; min-width: 300px; }
+        .wiki-content p { line-height: 1.6; font-size: 1.1rem; margin-bottom: 1rem; }
+        .wiki-content h3 { border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 2rem; }
+
+        .wiki-infobox {
+            flex: 1; min-width: 250px; background: var(--wiki-infobox);
+            border: 1px solid var(--border); border-radius: 4px; padding: 1rem;
+            text-align: center; height: fit-content;
+        }
+        .wiki-infobox img { width: 100%; max-width: 200px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+        
+        .type-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            color: white; font-weight: bold; font-size: 0.85rem; margin: 2px;
+            text-transform: capitalize; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .stat-row { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0; font-size: 0.9rem;}
+        .stat-name { text-transform: capitalize; font-weight: bold; }
+        .stat-bar-container { flex: 1; background: #ddd; height: 10px; margin: 5px 10px; border-radius: 5px; overflow: hidden; }
+        .stat-bar { height: 100%; background: var(--accent); }
+
+    </style>
+</head>
+<body data-theme="pikachu">
+
+    <header>
+        <h1>Poké<span>Wiki</span></h1>
+        <div class="theme-selector">
+            <button class="theme-btn" onclick="setTheme('umbreon')">🌙 Escuro Umbreon</button>
+            <button class="theme-btn active" onclick="setTheme('pikachu')">⚡ Amarelo Pikachu</button>
+            <button class="theme-btn" onclick="setTheme('rotom')">📱 Vermelho Rotom</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Pastas das Gerações -->
+        <div class="folders" id="genTabs">
+            <button class="folder-tab active" onclick="loadGeneration(1, 1, 151)">Geração 1</button>
+            <button class="folder-tab" onclick="loadGeneration(2, 152, 251)">Geração 2</button>
+            <button class="folder-tab" onclick="loadGeneration(3, 252, 386)">Geração 3</button>
+            <button class="folder-tab" onclick="loadGeneration(4, 387, 493)">Geração 4</button>
+            <button class="folder-tab" onclick="loadGeneration(5, 494, 649)">Geração 5</button>
+            <button class="folder-tab" onclick="loadGeneration(6, 650, 721)">Geração 6</button>
+            <button class="folder-tab" onclick="loadGeneration(7, 722, 809)">Geração 7</button>
+            <button class="folder-tab" onclick="loadGeneration(8, 810, 898)">Geração 8</button>
+        </div>
+
+        <div class="folder-content">
+            <div id="pokemonGrid" class="pokemon-grid">
+                <!-- Os Pokémon serão injetados aqui -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Artigo Wikipedia (Modal) -->
+    <div id="wikiModal" class="modal-overlay">
+        <div class="wiki-article">
+            <div class="wiki-header">
+                <h2 id="wName">Carregando...</h2>
+                <button class="close-btn" onclick="closeWiki()">&times;</button>
+            </div>
+            <div class="wiki-body">
+                <div class="wiki-content">
+                    <p><strong><span id="wNameText" style="text-transform: capitalize;"></span></strong> é um Pokémon introduzido na <span id="wGen"></span>.</p>
+                    <h3>Biologia</h3>
+                    <p id="wDesc">Buscando dados biológicos na PokéDex...</p>
+                    
+                    <h3>Características</h3>
+                    <ul>
+                        <li><strong>Altura:</strong> <span id="wHeight"></span> m</li>
+                        <li><strong>Peso:</strong> <span id="wWeight"></span> kg</li>
+                        <li><strong>Habilidade Principal:</strong> <span id="wAbility" style="text-transform: capitalize;"></span></li>
+                    </ul>
+                </div>
+                
+                <!-- Infobox à direita -->
+                <div class="wiki-infobox">
+                    <img id="wImage" src="" alt="Sprite">
+                    <div id="wTypes" style="margin-bottom: 1rem;"></div>
+                    
+                    <div style="text-align: left; margin-top: 1rem;">
+                        <h4 style="margin-bottom: 5px; text-align: center;">Estatísticas Base</h4>
+                        <div id="wStats"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // SISTEMA DE TEMAS
+        // ==========================================
+        function setTheme(themeName) {
+            document.body.setAttribute('data-theme', themeName);
+            document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // Dicionário de cores dos tipos para a Infobox
+        const typeColors = {
+            normal: '#A8A77A', fire: '#EE8130', water: '#6390F0', electric: '#F7D02C',
+            grass: '#7AC74C', ice: '#96D9D6', fighting: '#C22E28', poison: '#A33EA1',
+            ground: '#E2BF65', flying: '#A98FF3', psychic: '#F95587', bug: '#A6B91A',
+            rock: '#B6A136', ghost: '#735797', dragon: '#6F35FC', dark: '#705746',
+            steel: '#B7B7CE', fairy: '#D685AD'
+        };
+
+        // ==========================================
+        // CARREGAMENTO DA PASTA (Geração)
+        // ==========================================
+        async function loadGeneration(genNum, startId, endId) {
+            // Atualizar abas visuais
+            document.querySelectorAll('.folder-tab').forEach(tab => tab.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            const grid = document.getElementById('pokemonGrid');
+            grid.innerHTML = '<div class="loading">Sincronizando com a PokéDex... Aguarde.</div>';
+
+            try {
+                let html = '';
+                // Como carregar 100+ requisições de vez trava o navegador,
+                // Montamos os cards usando o link de imagem direto do GitHub Oficial da PokeAPI
+                for (let id = startId; id <= endId; id++) {
+                    const imgUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+                    // O nome será atualizado ao clicar, para renderização instantânea do grid, deixamos genérico ou buscamos apenas a lista
+                    html += `
+                        <div class="poke-card" onclick="openWiki(${id}, ${genNum})">
+                            <img src="${imgUrl}" alt="Pokemon ${id}" loading="lazy">
+                            <div class="poke-id">#${String(id).padStart(3, '0')}</div>
+                            <div class="poke-name">Pokémon ${id}</div>
+                        </div>
+                    `;
+                }
+                grid.innerHTML = html;
+                
+                // Buscar os nomes reais para atualizar o grid (Otimização)
+                const limit = (endId - startId) + 1;
+                const offset = startId - 1;
+                fetch(`https://pokeapi.co/api/v2/pokemon?limit=${limit}&offset=${offset}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const cards = grid.querySelectorAll('.poke-name');
+                        data.results.forEach((poke, index) => {
+                            cards[index].textContent = poke.name;
+                        });
+                    });
+
+            } catch (error) {
+                grid.innerHTML = '<div class="loading">Erro ao conectar com a PokéDex.</div>';
+            }
+        }
+
+        // ==========================================
+        // WIKIPEDIA ARTICLE (Modal com dados da API)
+        // ==========================================
+        async function openWiki(id, genNum) {
+            const modal = document.getElementById('wikiModal');
+            modal.classList.add('active');
+            
+            // Estado de carregamento
+            document.getElementById('wName').textContent = "Carregando...";
+            document.getElementById('wDesc').textContent = "Buscando nos arquivos...";
+            document.getElementById('wTypes').innerHTML = '';
+            document.getElementById('wStats').innerHTML = '';
+
+            try {
+                // Requisições paralelas para dados de combate e espécie(história)
+                const [pokeRes, speciesRes] = await Promise.all([
+                    fetch(`https://pokeapi.co/api/v2/pokemon/${id}`),
+                    fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`)
+                ]);
+
+                const pokeData = await pokeRes.json();
+                const speciesData = await speciesRes.json();
+
+                // Preencher Info principal
+                document.getElementById('wName').textContent = pokeData.name;
+                document.getElementById('wNameText').textContent = pokeData.name;
+                document.getElementById('wGen').textContent = `Geração ${genNum}`;
+                document.getElementById('wImage').src = pokeData.sprites.other['official-artwork'].front_default || pokeData.sprites.front_default;
+                document.getElementById('wHeight').textContent = (pokeData.height / 10).toFixed(1);
+                document.getElementById('wWeight').textContent = (pokeData.weight / 10).toFixed(1);
+                document.getElementById('wAbility').textContent = pokeData.abilities[0].ability.name.replace('-', ' ');
+
+                // Preencher Tipos (Badges)
+                const typesHtml = pokeData.types.map(t => {
+                    const color = typeColors[t.type.name] || '#777';
+                    return `<span class="type-badge" style="background-color: ${color}">${t.type.name}</span>`;
+                }).join('');
+                document.getElementById('wTypes').innerHTML = typesHtml;
+
+                // Preencher Estatísticas
+                const statsHtml = pokeData.stats.map(s => {
+                    const maxStat = 255;
+                    const percent = (s.base_stat / maxStat) * 100;
+                    const statName = s.stat.name.replace('special-attack', 'Sp. Atk').replace('special-defense', 'Sp. Def');
+                    return `
+                        <div class="stat-row">
+                            <span class="stat-name">${statName}</span>
+                            <div class="stat-bar-container"><div class="stat-bar" style="width: ${percent}%"></div></div>
+                            <span>${s.base_stat}</span>
+                        </div>
+                    `;
+                }).join('');
+                document.getElementById('wStats').innerHTML = statsHtml;
+
+                // Encontrar descrição (Flavor Text) em Inglês ou Espanhol (PokeAPI não tem português para todos)
+                const entry = speciesData.flavor_text_entries.find(e => e.language.name === 'en');
+                const desc = entry ? entry.flavor_text.replace(/\f/g, ' ') : "Sem dados ecológicos disponíveis no momento.";
+                document.getElementById('wDesc').textContent = desc;
+
+            } catch (error) {
+                document.getElementById('wDesc').textContent = "Ocorreu um erro ao ler a PokéDex.";
+            }
+        }
+
+        function closeWiki() {
+            document.getElementById('wikiModal').classList.remove('active');
+        }
+
+        // Fechar modal clicando fora
+        window.onclick = function(event) {
+            const modal = document.getElementById('wikiModal');
+            if (event.target === modal) { closeWiki(); }
+        }
+
+        // Iniciar carregando a 1ª Geração
+        window.onload = () => {
+            // Chamando via o primeiro botão para manter o estilo active correto
+            document.querySelector('.folder-tab').click();
+        };
+
+    </script>
+</body>
+</html>
