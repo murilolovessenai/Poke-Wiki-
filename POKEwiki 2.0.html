@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokéWiki & Team Builder - A Enciclopédia Pokémon</title>
+    <style>
+        /* =========================================================
+           TEMAS CUSTOMIZADOS
+           ========================================================= */
+        :root {
+            --bg-body: #fde047;
+            --bg-card: #ffffff;
+            --bg-folder: #fef08a;
+            --text-main: #1e293b;
+            --text-muted: #475569;
+            --accent: #ef4444;
+            --accent-hover: #dc2626;
+            --border: #eab308;
+            --wiki-infobox: #f8fafc;
+            --success: #22c55e;
+            --warning: #f97316;
+            --danger: #ef4444;
+        }
+
+        [data-theme="umbreon"] {
+            --bg-body: #121212;
+            --bg-card: #27272a;
+            --bg-folder: #18181b;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent: #fbbf24;
+            --accent-hover: #f59e0b;
+            --border: #3f3f46;
+            --wiki-infobox: #3f3f46;
+        }
+
+        [data-theme="rotom"] {
+            --bg-body: #ef4444;
+            --bg-card: #ffffff;
+            --bg-folder: #fca5a5;
+            --text-main: #1e293b;
+            --text-muted: #475569;
+            --accent: #38bdf8;
+            --accent-hover: #0284c7;
+            --border: #b91c1c;
+            --wiki-infobox: #f1f5f9;
+        }
+
+        /* =========================================================
+           ESTILOS GERAIS & NAVEGAÇÃO
+           ========================================================= */
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0; padding: 0;
+            transition: background-color 0.4s, color 0.4s;
+        }
+
+        header {
+            padding: 1.5rem 1rem; text-align: center;
+            background: var(--bg-card);
+            border-bottom: 4px solid var(--accent);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 { margin: 0; font-size: 2.2rem; color: var(--text-main); display: flex; align-items: center; justify-content: center; gap: 10px;}
+        header h1 span { color: var(--accent); }
+
+        .theme-selector {
+            margin-top: 1rem; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+        }
+
+        .theme-btn {
+            padding: 0.4rem 1.2rem; border: 2px solid var(--border);
+            border-radius: 20px; cursor: pointer; font-weight: bold;
+            background: var(--bg-card); color: var(--text-main);
+            transition: 0.2s transform, 0.2s background;
+        }
+        .theme-btn:hover { transform: translateY(-2px); }
+        .theme-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+        .nav-mode-tabs {
+            display: flex; justify-content: center; gap: 10px; margin-top: 1.2rem;
+        }
+        .mode-tab {
+            padding: 0.75rem 2rem; border: none; border-radius: 8px;
+            font-size: 1.1rem; font-weight: bold; cursor: pointer;
+            background: var(--bg-folder); color: var(--text-main);
+            border: 2px solid var(--border); transition: 0.3s;
+        }
+        .mode-tab.active {
+            background: var(--accent); color: #fff; border-color: var(--accent);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        main { max-width: 1300px; margin: 2rem auto; padding: 0 1rem; }
+
+        /* BUSCA E FILTROS */
+        .search-container {
+            background: var(--bg-card); padding: 1.2rem; border-radius: 12px;
+            border: 2px solid var(--border); margin-bottom: 1.5rem;
+            display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+        }
+        .search-input {
+            flex: 2; min-width: 200px; padding: 0.75rem 1rem;
+            border: 2px solid var(--border); border-radius: 8px;
+            background: var(--bg-body); color: var(--text-main); font-size: 1rem;
+        }
+        .filter-select {
+            flex: 1; min-width: 140px; padding: 0.75rem 1rem;
+            border: 2px solid var(--border); border-radius: 8px;
+            background: var(--bg-body); color: var(--text-main); font-size: 1rem; font-weight: bold;
+        }
+
+        /* PASTAS DE GERAÇÕES */
+        .folders { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: -1px; }
+        .folder-tab {
+            background: var(--bg-folder); border: 2px solid var(--border); border-bottom: none;
+            padding: 10px 16px; border-radius: 10px 10px 0 0; cursor: pointer;
+            font-weight: bold; color: var(--text-main); transition: 0.3s; font-size: 0.9rem;
+        }
+        .folder-tab.active { background: var(--bg-card); border-top: 4px solid var(--accent); padding-bottom: 12px; z-index: 10; position: relative;}
+
+        .folder-content {
+            background: var(--bg-card); border: 2px solid var(--border);
+            border-radius: 0 10px 10px 10px; padding: 1.5rem; min-height: 50vh;
+        }
+
+        /* GRID POKÉMON */
+        .pokemon-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 1.2rem;
+        }
+
+        .poke-card {
+            background: var(--bg-body); border: 2px solid var(--border);
+            border-radius: 12px; padding: 1rem; text-align: center; position: relative;
+            transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .poke-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: var(--accent); }
+        .poke-card img { width: 100px; height: 100px; object-fit: contain; margin: 0 auto; cursor: pointer; }
+        .poke-id { font-size: 0.8rem; color: var(--text-muted); font-weight: bold; }
+        .poke-name { text-transform: capitalize; margin: 0.4rem 0; font-size: 1.05rem; font-weight: bold; cursor: pointer; }
+        
+        .btn-team-action {
+            width: 100%; padding: 6px; border: none; border-radius: 6px;
+            font-weight: bold; cursor: pointer; margin-top: 8px; transition: 0.2s;
+        }
+        .btn-add { background: var(--accent); color: white; }
+        .btn-add:hover { background: var(--accent-hover); }
+        .btn-remove { background: #64748b; color: white; }
+        .btn-remove:hover { background: #475569; }
+
+        .loading { text-align: center; font-size: 1.2rem; font-weight: bold; width: 100%; grid-column: 1/-1; padding: 3rem 0; }
+
+        /* TEAM BUILDER UI */
+        .team-builder-panel { display: none; }
+        .team-builder-panel.active { display: block; }
+        
+        .team-header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-card); padding: 1.2rem 1.5rem; border-radius: 12px;
+            border: 2px solid var(--border); margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;
+        }
+        .team-slots-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.2rem; margin-bottom: 2rem;
+        }
+        .team-slot-card {
+            background: var(--bg-card); border: 2px dashed var(--border); border-radius: 12px;
+            min-height: 220px; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; padding: 1rem; text-align: center; position: relative;
+        }
+        .team-slot-card.filled { border-style: solid; background: var(--bg-body); }
+        
+        /* ANÁLISE DO TIME */
+        .analytics-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;
+        }
+        .analytics-card {
+            background: var(--bg-card); border: 2px solid var(--border);
+            border-radius: 12px; padding: 1.5rem;
+        }
+        .analytics-card h3 { margin-top: 0; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+
+        .vuln-row { display: flex; align-items: center; margin-bottom: 6px; font-size: 0.85rem; }
+        .vuln-type { width: 85px; font-weight: bold; text-transform: capitalize; }
+        .vuln-bar-bg { flex: 1; height: 14px; background: #e2e8f0; border-radius: 7px; overflow: hidden; margin: 0 10px; display: flex; }
+        .vuln-segment { height: 100%; transition: width 0.3s; }
+        .vuln-weak { background: var(--danger); }
+        .vuln-res { background: var(--success); }
+        .vuln-imm { background: #3b82f6; }
+
+        .insights-list { list-style: none; padding: 0; margin: 0; }
+        .insights-list li { margin-bottom: 10px; padding: 10px; border-radius: 8px; background: var(--bg-folder); font-size: 0.95rem; line-height: 1.4; }
+
+        /* MODAL ESTILO WIKIPEDIA */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; padding: 1rem;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .wiki-article {
+            background: var(--bg-card); width: 100%; max-width: 900px; max-height: 90vh;
+            border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .wiki-header {
+            padding: 1rem 2rem; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .wiki-header h2 { margin: 0; text-transform: capitalize; font-size: 2rem; border-bottom: 2px solid var(--text-muted); padding-bottom: 5px;}
+        .close-btn { background: none; border: none; font-size: 2rem; color: var(--text-main); cursor: pointer; }
+
+        .wiki-body { display: flex; flex-wrap: wrap; padding: 2rem; gap: 2rem; overflow-y: auto; }
+        .wiki-content { flex: 2; min-width: 280px; }
+        .wiki-content p { line-height: 1.6; font-size: 1.05rem; margin-bottom: 1rem; }
+        .wiki-content h3 { border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-top: 1.5rem; }
+
+        .wiki-infobox {
+            flex: 1; min-width: 240px; background: var(--wiki-infobox);
+            border: 1px solid var(--border); border-radius: 4px; padding: 1rem;
+            text-align: center; height: fit-content;
+        }
+        .wiki-infobox img { width: 100%; max-width: 180px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+        
+        .type-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            color: white; font-weight: bold; font-size: 0.85rem; margin: 2px;
+            text-transform: capitalize; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .stat-row { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 6px 0; font-size: 0.85rem;}
+        .stat-name { text-transform: capitalize; font-weight: bold; }
+        .stat-bar-container { flex: 1; background: #ddd; height: 10px; margin: 5px 10px; border-radius: 5px; overflow: hidden; }
+        .stat-bar { height: 100%; background: var(--accent); }
+
+        .badge-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    </style>
+</head>
+<body data-theme="pikachu">
+
+    <header>
+        <h1>Poké<span>Wiki</span> & Team Builder</h1>
+        <div class="theme-selector">
+            <button class="theme-btn" onclick="setTheme('umbreon')">🌙 Escuro Umbreon</button>
+            <button class="theme-btn active" onclick="setTheme('pikachu')">⚡ Amarelo Pikachu</button>
+            <button class="theme-btn" onclick="setTheme('rotom')">📱 Vermelho Rotom</button>
+        </div>
+        <div class="nav-mode-tabs">
+            <button class="mode-tab active" id="tabModePokedex" onclick="switchView('pokedex')">📖 Pokédex</button>
+            <button class="mode-tab" id="tabModeTeam" onclick="switchView('team')">🛡️ Meu Time (<span id="teamNavCount">0/6</span>)</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- PAINEL 1: POKÉDEX -->
+        <div id="pokedexView">
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar por Nome ou Número da PokéDex (ex: Pikachu ou 25)..." oninput="onSearchInput()">
+                <select id="typeFilter" class="filter-select" onchange="applyFilters()">
+                    <option value="all">Todos os Tipos</option>
+                </select>
+                <select id="genFilter" class="filter-select" onchange="onGenFilterChange()">
+                    <option value="all">Todas as Gerações</option>
+                    <option value="1">Geração 1 (Kanto)</option>
+                    <option value="2">Geração 2 (Johto)</option>
+                    <option value="3">Geração 3 (Hoenn)</option>
+                    <option value="4">Geração 4 (Sinnoh)</option>
+                    <option value="5">Geração 5 (Unova)</option>
+                    <option value="6">Geração 6 (Kalos)</option>
+                    <option value="7">Geração 7 (Alola)</option>
+                    <option value="8">Geração 8 (Galar)</option>
+                    <option value="9">Geração 9 (Paldea)</option>
+                </select>
+            </div>
+
+            <div class="folders" id="genTabs">
+                <button class="folder-tab active" onclick="selectGenTab(1)">Gen 1</button>
+                <button class="folder-tab" onclick="selectGenTab(2)">Gen 2</button>
+                <button class="folder-tab" onclick="selectGenTab(3)">Gen 3</button>
+                <button class="folder-tab" onclick="selectGenTab(4)">Gen 4</button>
+                <button class="folder-tab" onclick="selectGenTab(5)">Gen 5</button>
+                <button class="folder-tab" onclick="selectGenTab(6)">Gen 6</button>
+                <button class="folder-tab" onclick="selectGenTab(7)">Gen 7</button>
+                <button class="folder-tab" onclick="selectGenTab(8)">Gen 8</button>
+                <button class="folder-tab" onclick="selectGenTab(9)">Gen 9</button>
+            </div>
+
+            <div class="folder-content">
+                <div id="pokemonGrid" class="pokemon-grid"></div>
+            </div>
+        </div>
+
+        <!-- PAINEL 2: TEAM BUILDER -->
+        <div id="teamView" class="team-builder-panel">
+            <div class="team-header">
+                <div>
+                    <h2 style="margin: 0;">Composição do Time</h2>
+                    <span style="color: var(--text-muted); font-size: 0.95rem;">Selecione até 6 Pokémon para analisar o equilíbrio tático.</span>
+                </div>
+                <div>
+                    <span style="font-size: 1.3rem; font-weight: bold; margin-right: 15px;" id="teamStatusText">0/6 Pokémon</span>
+                    <button class="theme-btn" style="background: var(--danger); color: white; border: none;" onclick="clearTeam()">🗑️ Limpar Time</button>
+                </div>
+            </div>
+
+            <div class="team-slots-grid" id="teamSlotsContainer"></div>
+
+            <div class="analytics-grid">
+                <!-- Card 1: Vulnerabilidades -->
+                <div class="analytics-card">
+                    <h3>🛡️ Vulnerabilidades Defensivas</h3>
+                    <div style="font-size: 0.8rem; margin-bottom: 12px; color: var(--text-muted);">
+                        <span style="color: var(--danger); font-weight: bold;">■ Weak</span> | 
+                        <span style="color: var(--success); font-weight: bold;">■ Resist</span> | 
+                        <span style="color: #3b82f6; font-weight: bold;">■ Immune</span>
+                    </div>
+                    <div id="vulnerabilityChart"></div>
+                </div>
+
+                <!-- Card 2: Cobertura Ofensiva (STAB) -->
+                <div class="analytics-card">
+                    <h3>⚔️ Cobertura Ofensiva (STAB)</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">Tipos atacados com dano <strong>Super Efetivo (2x)</strong> pelos ataques do seu time:</p>
+                    <div id="offensiveCoverageBadges" class="badge-list" style="margin-bottom: 1.5rem;"></div>
+                    
+                    <h3>📊 Médias de Estatísticas Base</h3>
+                    <div id="teamStatsAverages"></div>
+                </div>
+
+                <!-- Card 3: Diagnóstico de Equilíbrio -->
+                <div class="analytics-card">
+                    <h3>📋 Diagnóstico Estratégico</h3>
+                    <ul class="insights-list" id="insightsList"></ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL WIKIPEDIA -->
+    <div id="wikiModal" class="modal-overlay">
+        <div class="wiki-article">
+            <div class="wiki-header">
+                <h2 id="wName">Carregando...</h2>
+                <button class="close-btn" onclick="closeWiki()">&times;</button>
+            </div>
+            <div class="wiki-body">
+                <div class="wiki-content">
+                    <p><strong><span id="wNameText" style="text-transform: capitalize;"></span></strong> é um Pokémon originalmente descoberto na <span id="wGen"></span>.</p>
+                    <div id="modalTeamBtnContainer" style="margin-bottom: 1rem;"></div>
+                    <h3>Biologia & Ecologia</h3>
+                    <p id="wDesc">Buscando dados biológicos na PokéDex...</p>
+                    
+                    <h3>Características</h3>
+                    <ul>
+                        <li><strong>Altura:</strong> <span id="wHeight"></span> m</li>
+                        <li><strong>Peso:</strong> <span id="wWeight"></span> kg</li>
+                        <li><strong>Habilidade Principal:</strong> <span id="wAbility" style="text-transform: capitalize;"></span></li>
+                    </ul>
+                </div>
+                
+                <div class="wiki-infobox">
+                    <img id="wImage" src="" alt="Sprite">
+                    <div id="wTypes" style="margin-bottom: 1rem;"></div>
+                    
+                    <div style="text-align: left; margin-top: 1rem;">
+                        <h4 style="margin-bottom: 5px; text-align: center;">Estatísticas Base</h4>
+                        <div id="wStats"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================
+        // CONSTANTES E ESTRUTURAS DE DADOS (1 a 9 Geração & Tipos)
+        // =========================================================
+        const GENERATIONS = {
+            1: { name: 'Geração 1 (Kanto)', start: 1, end: 151 },
+            2: { name: 'Geração 2 (Johto)', start: 152, end: 251 },
+            3: { name: 'Geração 3 (Hoenn)', start: 252, end: 386 },
+            4: { name: 'Geração 4 (Sinnoh)', start: 387, end: 493 },
+            5: { name: 'Geração 5 (Unova)', start: 494, end: 649 },
+            6: { name: 'Geração 6 (Kalos)', start: 650, end: 721 },
+            7: { name: 'Geração 7 (Alola)', start: 722, end: 809 },
+            8: { name: 'Geração 8 (Galar)', start: 810, end: 905 },
+            9: { name: 'Geração 9 (Paldea)', start: 906, end: 1025 }
+        };
+
+        const ALL_TYPES = ['normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground', 'flying', 'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'];
+
+        const typeColors = {
+            normal: '#A8A77A', fire: '#EE8130', water: '#6390F0', electric: '#F7D02C',
+            grass: '#7AC74C', ice: '#96D9D6', fighting: '#C22E28', poison: '#A33EA1',
+            ground: '#E2BF65', flying: '#A98FF3', psychic: '#F95587', bug: '#A6B91A',
+            rock: '#B6A136', ghost: '#735797', dragon: '#6F35FC', dark: '#705746',
+            steel: '#B7B7CE', fairy: '#D685AD'
+        };
+
+        // Matriz de Tipos 18x18 [Atacante][Defensor] -> Multiplicador
+        const TYPE_CHART = {
+            normal:   { rock: 0.5, ghost: 0, steel: 0.5 },
+            fire:     { fire: 0.5, water: 0.5, grass: 2, ice: 2, bug: 2, rock: 0.5, dragon: 0.5, steel: 2 },
+            water:    { fire: 2, water: 0.5, grass: 0.5, ground: 2, rock: 2, dragon: 0.5 },
+            electric: { water: 2, electric: 0.5, grass: 0.5, ground: 0, flying: 2, dragon: 0.5 },
+            grass:    { fire: 0.5, water: 2, grass: 0.5, poison: 0.5, ground: 2, flying: 0.5, bug: 0.5, rock: 2, dragon: 0.5, steel: 0.5 },
+            ice:      { fire: 0.5, water: 0.5, grass: 2, ice: 0.5, ground: 2, flying: 2, dragon: 2, steel: 0.5 },
+            fighting: { normal: 2, ice: 2, poison: 0.5, flying: 0.5, psychic: 0.5, bug: 0.5, rock: 2, ghost: 0, dark: 2, steel: 2, fairy: 0.5 },
+            poison:   { grass: 2, poison: 0.5, ground: 0.5, rock: 0.5, ghost: 0.5, steel: 0, fairy: 2 },
+            ground:   { fire: 2, electric: 2, grass: 0.5, poison: 2, flying: 0, bug: 0.5, rock: 2, steel: 2 },
+            flying:   { electric: 0.5, grass: 2, fighting: 2, bug: 2, rock: 0.5, steel: 0.5 },
+            psychic:  { fighting: 2, poison: 2, psychic: 0.5, dark: 0, steel: 0.5 },
+            bug:      { fire: 0.5, grass: 2, fighting: 0.5, poison: 0.5, flying: 0.5, psychic: 2, ghost: 0.5, dark: 2, steel: 0.5, fairy: 0.5 },
+            rock:     { fire: 2, ice: 2, fighting: 0.5, ground: 0.5, flying: 2, bug: 2, steel: 0.5 },
+            ghost:    { normal: 0, psychic: 2, ghost: 2, dark: 0.5 },
+            dragon:   { dragon: 2, steel: 0.5, fairy: 0 },
+            dark:     { fighting: 0.5, psychic: 2, ghost: 2, dark: 0.5, fairy: 0.5 },
+            steel:    { fire: 0.5, water: 0.5, electric: 0.5, ice: 2, rock: 2, steel: 0.5, fairy: 2 },
+            fairy:    { fire: 0.5, fighting: 2, poison: 0.5, dragon: 2, dark: 2, steel: 0.5 }
+        };
+
+        // =========================================================
+        // ESTADO DA APLICAÇÃO
+        // =========================================================
+        let allPokemonList = []; // Mapeamento completo id + name
+        let pokeCache = new Map(); // Cache de dados requisitados
+        let myTeam = JSON.parse(localStorage.getItem('pokewiki_team') || '[]');
+        let activeGenTab = 1;
+        let activeView = 'pokedex';
+        let searchDebounceTimer = null;
+
+        // =========================================================
+        // INICIALIZAÇÃO
+        // =========================================================
+        window.onload = async () => {
+            initTypeFilterDropdown();
+            updateTeamCounterUI();
+            await fetchAllPokemonIndex();
+            selectGenTab(1);
+        };
+
+        function setTheme(themeName) {
+            document.body.setAttribute('data-theme', themeName);
+            document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+            if(event && event.target) event.target.classList.add('active');
+        }
+
+        function initTypeFilterDropdown() {
+            const select = document.getElementById('typeFilter');
+            ALL_TYPES.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t.toUpperCase();
+                select.appendChild(opt);
+            });
+        }
+
+        // Busca o índice geral de 1025 Pokémon (Uma única requisição inicial leve)
+        async function fetchAllPokemonIndex() {
+            try {
+                const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=1025');
+                const data = await res.json();
+                allPokemonList = data.results.map((item, idx) => ({
+                    id: idx + 1,
+                    name: item.name
+                }));
+            } catch (err) {
+                console.error("Erro ao carregar índice global:", err);
+            }
+        }
+
+        // =========================================================
+        // LOGICA DE REQUISIÇÃO E CACHE DE DADOS DE COMBATE
+        // =========================================================
+        async function getPokemonData(id) {
+            if (pokeCache.has(id)) return pokeCache.get(id);
+
+            const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+            const data = await res.json();
+            
+            // Formatando objeto otimizado
+            const poke = {
+                id: data.id,
+                name: data.name,
+                height: data.height,
+                weight: data.weight,
+                types: data.types.map(t => t.type.name),
+                abilities: data.abilities.map(a => a.ability.name),
+                stats: {
+                    hp: data.stats[0].base_stat,
+                    attack: data.stats[1].base_stat,
+                    defense: data.stats[2].base_stat,
+                    specialAttack: data.stats[3].base_stat,
+                    specialDefense: data.stats[4].base_stat,
+                    speed: data.stats[5].base_stat,
+                    total: data.stats.reduce((acc, curr) => acc + curr.base_stat, 0)
+                },
+                image: data.sprites.other['official-artwork'].front_default || data.sprites.front_default
+            };
+
+            pokeCache.set(id, poke);
+            return poke;
+        }
+
+        // Helper para descobrir a geração a partir do ID
+        function getGenById(id) {
+            for (let g in GENERATIONS) {
+                if (id >= GENERATIONS[g].start && id <= GENERATIONS[g].end) return g;
+            }
+            return 1;
+        }
+
+        // =========================================================
+        // ALTERNÂNCIA DE ABAS E NAVEGAÇÃO
+        // =========================================================
+        function switchView(view) {
+            activeView = view;
+            document.getElementById('tabModePokedex').classList.toggle('active', view === 'pokedex');
+            document.getElementById('tabModeTeam').classList.toggle('active', view === 'team');
+            
+            document.getElementById('pokedexView').style.display = view === 'pokedex' ? 'block' : 'none';
+            document.getElementById('teamView').classList.toggle('active', view === 'team');
+
+            if (view === 'team') renderTeamBuilder();
+        }
+
+        function selectGenTab(genNum) {
+            activeGenTab = genNum;
+            document.getElementById('genFilter').value = genNum;
+            document.querySelectorAll('.folder-tab').forEach((tab, idx) => {
+                tab.classList.toggle('active', (idx + 1) === genNum);
+            });
+            document.getElementById('searchInput').value = '';
+            document.getElementById('typeFilter').value = 'all';
+            renderGridForGen(genNum);
+        }
+
+        function onGenFilterChange() {
+            const val = document.getElementById('genFilter').value;
+            if (val === 'all') {
+                applyFilters();
+            } else {
+                selectGenTab(parseInt(val));
+            }
+        }
+
+        // =========================================================
+        // RENDERIZAÇÃO DO GRID DA POKÉDEX
+        // =========================================================
+        function renderGridForGen(genNum) {
+            const gen = GENERATIONS[genNum];
+            const list = allPokemonList.filter(p => p.id >= gen.start && p.id <= gen.end);
+            renderPokemonCards(list);
+        }
+
+        function renderPokemonCards(list) {
+            const grid = document.getElementById('pokemonGrid');
+            if (list.length === 0) {
+                grid.innerHTML = '<div class="loading">Nenhum Pokémon encontrado.</div>';
+                return;
+            }
+
+            grid.innerHTML = list.map(p => {
+                const isTeam = myTeam.some(item => item.id === p.id);
+                const imgUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.id}.png`;
+                return `
+                    <div class="poke-card">
+                        <div onclick="openWiki(${p.id})">
+                            <img src="${imgUrl}" alt="${p.name}" loading="lazy">
+                            <div class="poke-id">#${String(p.id).padStart(3, '0')}</div>
+                            <div class="poke-name">${p.name}</div>
+                        </div>
+                        <button class="btn-team-action ${isTeam ? 'btn-remove' : 'btn-add'}" onclick="toggleTeamMember(${p.id})">
+                            ${isTeam ? '❌ Remover' : '➕ Add ao Time'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // =========================================================
+        // BUSCA E FILTROS EM TEMPO REAL
+        // =========================================================
+        function onSearchInput() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(applyFilters, 250);
+        }
+
+        async function applyFilters() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const typeVal = document.getElementById('typeFilter').value;
+            const genVal = document.getElementById('genFilter').value;
+
+            let filtered = allPokemonList;
+
+            // Filtro por Geração
+            if (genVal !== 'all') {
+                const g = GENERATIONS[parseInt(genVal)];
+                filtered = filtered.filter(p => p.id >= g.start && p.id <= g.end);
+            }
+
+            // Filtro por Texto (Nome ou Número)
+            if (query !== '') {
+                filtered = filtered.filter(p => p.name.toLowerCase().includes(query) || String(p.id) === query);
+            }
+
+            // Filtro por Tipo (Exige carregar dados se o filtro de tipo estiver ativo)
+            if (typeVal !== 'all') {
+                const grid = document.getElementById('pokemonGrid');
+                grid.innerHTML = '<div class="loading">Filtrando por tipo...</div>';
+                
+                const typeFiltered = [];
+                for (let p of filtered) {
+                    const poke = await getPokemonData(p.id);
+                    if (poke.types.includes(typeVal)) {
+                        typeFiltered.push(p);
+                    }
+                }
+                filtered = typeFiltered;
+            }
+
+            renderPokemonCards(filtered);
+        }
+
+        // =========================================================
+        // GERENCIAMENTO DO TIME (TEAM BUILDER)
+        // =========================================================
+        async function toggleTeamMember(id) {
+            const index = myTeam.findIndex(p => p.id === id);
+            if (index >= 0) {
+                myTeam.splice(index, 1);
+            } else {
+                if (myTeam.length >= 6) {
+                    alert('Seu time já possui 6 Pokémon! Remova um integrante antes.');
+                    return;
+                }
+                const pokeData = await getPokemonData(id);
+                myTeam.push(pokeData);
+            }
+            saveTeam();
+        }
+
+        function clearTeam() {
+            if (myTeam.length === 0) return;
+            if (confirm('Deseja realmente remover todos os Pokémon do seu time?')) {
+                myTeam = [];
+                saveTeam();
+            }
+        }
+
+        function saveTeam() {
+            localStorage.setItem('pokewiki_team', JSON.stringify(myTeam));
+            updateTeamCounterUI();
+            if (activeView === 'pokedex') applyFilters();
+            if (activeView === 'team') renderTeamBuilder();
+            
+            // Atualizar modal se estiver aberto
+            const modal = document.getElementById('wikiModal');
+            if (modal.classList.contains('active')) {
+                const currentModalId = modal.dataset.currentId;
+                if (currentModalId) renderModalTeamButton(parseInt(currentModalId));
+            }
+        }
+
+        function updateTeamCounterUI() {
+            const text = `${myTeam.length}/6`;
+            document.getElementById('teamNavCount').textContent = text;
+            document.getElementById('teamStatusText').textContent = `${text} Pokémon`;
+        }
+
+        function renderTeamBuilder() {
+            const container = document.getElementById('teamSlotsContainer');
+            let html = '';
+
+            for (let i = 0; i < 6; i++) {
+                const poke = myTeam[i];
+                if (poke) {
+                    const typesBadges = poke.types.map(t => 
+                        `<span class="type-badge" style="background:${typeColors[t] || '#777'}">${t}</span>`
+                    ).join('');
+
+                    html += `
+                        <div class="team-slot-card filled">
+                            <img src="${poke.image}" style="width: 90px; height: 90px; object-fit: contain; cursor: pointer;" onclick="openWiki(${poke.id})">
+                            <div style="font-size:0.8rem; font-weight:bold; color:var(--text-muted);">#${String(poke.id).padStart(3, '0')}</div>
+                            <div style="font-weight:bold; text-transform:capitalize; font-size: 1.1rem;" onclick="openWiki(${poke.id})">${poke.name}</div>
+                            <div style="margin: 6px 0;">${typesBadges}</div>
+                            <button class="btn-team-action btn-remove" onclick="toggleTeamMember(${poke.id})">❌ Remover</button>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="team-slot-card" onclick="switchView('pokedex')" style="cursor: pointer;">
+                            <div style="font-size: 2.5rem; color: var(--border);">+</div>
+                            <div style="font-weight: bold; color: var(--text-muted);">Vaga Livre</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Clique para adicionar</div>
+                        </div>
+                    `;
+                }
+            }
+            container.innerHTML = html;
+            runTeamAnalytics();
+        }
+
+        // =========================================================
+        // MOTOR DE ANÁLISE ESTATÍSTICA E VULNERABILIDADE DO TIME
+        // =========================================================
+        function calculateDefensiveMultipliers(types) {
+            const result = {};
+            ALL_TYPES.forEach(atkType => {
+                let mult = 1;
+                types.forEach(defType => {
+                    const val = (TYPE_CHART[atkType] && TYPE_CHART[atkType][defType] !== undefined)
+                        ? TYPE_CHART[atkType][defType] : 1;
+                    mult *= val;
+                });
+                result[atkType] = mult;
+            });
+            return result;
+        }
+
+        function runTeamAnalytics() {
+            const vulnChart = document.getElementById('vulnerabilityChart');
+            const coverageBadges = document.getElementById('offensiveCoverageBadges');
+            const statsDiv = document.getElementById('teamStatsAverages');
+            const insightsUl = document.getElementById('insightsList');
+
+            if (myTeam.length === 0) {
+                vulnChart.innerHTML = '<p style="color:var(--text-muted)">Adicione Pokémon ao seu time para visualizar os gráficos.</p>';
+                coverageBadges.innerHTML = '<p style="color:var(--text-muted)">Nenhum Pokémon no time.</p>';
+                statsDiv.innerHTML = '<p style="color:var(--text-muted)">Sem dados estatísticos.</p>';
+                insightsUl.innerHTML = '<li>Adicione integrantes ao time para receber um diagnóstico detalhado de fraquezas e equilíbrios.</li>';
+                return;
+            }
+
+            // 1. Matriz de Vulnerabilidades Acumuladas
+            const teamVulnSummary = {};
+            ALL_TYPES.forEach(t => teamVulnSummary[t] = { weak: 0, res: 0, imm: 0, weakPokemons: [] });
+
+            myTeam.forEach(poke => {
+                const mults = calculateDefensiveMultipliers(poke.types);
+                ALL_TYPES.forEach(t => {
+                    const m = mults[t];
+                    if (m > 1) {
+                        teamVulnSummary[t].weak++;
+                        teamVulnSummary[t].weakPokemons.push(poke.name);
+                    } else if (m < 1 && m > 0) {
+                        teamVulnSummary[t].res++;
+                    } else if (m === 0) {
+                        teamVulnSummary[t].imm++;
+                    }
+                });
+            });
+
+            // Renderizar Gráfico de Vulnerabilidades
+            vulnChart.innerHTML = ALL_TYPES.map(t => {
+                const data = teamVulnSummary[t];
+                const totalMembers = myTeam.length;
+                const weakPct = (data.weak / totalMembers) * 100;
+                const resPct = (data.res / totalMembers) * 100;
+                const immPct = (data.imm / totalMembers) * 100;
+
+                return `
+                    <div class="vuln-row">
+                        <span class="vuln-type">${t}</span>
+                        <div class="vuln-bar-bg">
+                            <div class="vuln-segment vuln-weak" style="width: ${weakPct}%" title="Fracos: ${data.weak}"></div>
+                            <div class="vuln-segment vuln-res" style="width: ${resPct}%" title="Resistentes: ${data.res}"></div>
+                            <div class="vuln-segment vuln-imm" style="width: ${immPct}%" title="Imunes: ${data.imm}"></div>
+                        </div>
+                        <span style="font-weight:bold; width: 35px; text-align:right;">
+                            ${data.weak > 0 ? `<span style="color:var(--danger)">-${data.weak}</span>` : `<span style="color:var(--success)">+${data.res+data.imm}</span>`}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+
+            // 2. Cobertura Ofensiva Super Efetiva (STAB)
+            const teamStabTypes = new Set();
+            myTeam.forEach(p => p.types.forEach(t => teamStabTypes.add(t)));
+
+            const coveredTypes = new Set();
+            teamStabTypes.forEach(atkType => {
+                if (TYPE_CHART[atkType]) {
+                    Object.keys(TYPE_CHART[atkType]).forEach(defType => {
+                        if (TYPE_CHART[atkType][defType] > 1) {
+                            coveredTypes.add(defType);
+                        }
+                    });
+                }
+            });
+
+            coverageBadges.innerHTML = ALL_TYPES.map(t => {
+                const isCovered = coveredTypes.has(t);
+                const bg = isCovered ? (typeColors[t] || '#777') : '#cbd5e1';
+                const opacity = isCovered ? '1' : '0.4';
+                return `<span class="type-badge" style="background:${bg}; opacity:${opacity};">${t} ${isCovered ? '✓' : ''}</span>`;
+            }).join('');
+
+            // 3. Médias de Estatísticas Base
+            const sums = { hp: 0, attack: 0, defense: 0, specialAttack: 0, specialDefense: 0, speed: 0, total: 0 };
+            myTeam.forEach(p => {
+                sums.hp += p.stats.hp;
+                sums.attack += p.stats.attack;
+                sums.defense += p.stats.defense;
+                sums.specialAttack += p.stats.specialAttack;
+                sums.specialDefense += p.stats.specialDefense;
+                sums.speed += p.stats.speed;
+                sums.total += p.stats.total;
+            });
+            const len = myTeam.length;
+            const avg = {
+                hp: Math.round(sums.hp / len),
+                attack: Math.round(sums.attack / len),
+                defense: Math.round(sums.defense / len),
+                specialAttack: Math.round(sums.specialAttack / len),
+                specialDefense: Math.round(sums.specialDefense / len),
+                speed: Math.round(sums.speed / len),
+                total: Math.round(sums.total / len)
+            };
+
+            const maxStat = 180;
+            statsDiv.innerHTML = `
+                <div class="stat-row"><span class="stat-name">Média HP</span><div class="stat-bar-container"><div class="stat-bar" style="width:${(avg.hp/maxStat)*100}%"></div></div><span>${avg.hp}</span></div>
+                <div class="stat-row"><span class="stat-name">Média Ataque</span><div class="stat-bar-container"><div class="stat-bar" style="width:${(avg.attack/maxStat)*100}%"></div></div><span>${avg.attack}</span></div>
+                <div class="stat-row"><span class="stat-name">Média Defesa</span><div class="stat-bar-container"><div class="stat-bar" style="width:${(avg.defense/maxStat)*100}%"></div></div><span>${avg.defense}</span></div>
+                <div class="stat-row"><span class="stat-name">Média Sp. Atk</span><div class="stat-bar-container"><div class="stat-bar" style="width:${(avg.specialAttack/maxStat)*100}%"></div></div><span>${avg.specialAttack}</span></div>
+                <div class="stat-row"><span class="stat-name">Média Sp. Def</span><div class="stat-bar-container"><div class="stat-bar" style="width:${(avg.specialDefense/maxStat)*100}%"></div></div><span>${avg.specialDefense}</span></div>
+                <div class="stat-row"><span class="stat-name">Média Velocidade</span><div class="stat-bar-container"><div class="stat-bar" style="width:${(avg.speed/maxStat)*100}%"></div></div><span>${avg.speed}</span></div>
+                <div style="text-align:right; font-weight:bold; margin-top:10px;">Total Médio (BST): ${avg.total}</div>
+            `;
+
+            // 4. Diagnóstico de Equilíbrio Narrativo
+            const insights = [];
+            
+            // Fraquezas crônicas (>2 Pokémon fracos a um tipo)
+            ALL_TYPES.forEach(t => {
+                if (teamVulnSummary[t].weak >= 3) {
+                    insights.push(`🔴 <strong>Alerta Crítico:</strong> ${teamVulnSummary[t].weak} integrantes são fracos contra o tipo <strong>${t.toUpperCase()}</strong> (${teamVulnSummary[t].weakPokemons.join(', ')}).`);
+                } else if (teamVulnSummary[t].weak === 2) {
+                    insights.push(`🟠 <strong>Vulnerabilidade Moderada:</strong> 2 Pokémon possuem fraqueza ao tipo <strong>${t.toUpperCase()}</strong>.`);
+                }
+            });
+
+            // Falta de resistências
+            ALL_TYPES.forEach(t => {
+                if (teamVulnSummary[t].res === 0 && teamVulnSummary[t].imm === 0 && teamVulnSummary[t].weak > 0) {
+                    insights.push(`⚠️ <strong>Lacuna Defensiva:</strong> Nenhum integrante resiste ou possui imunidade a ataques do tipo <strong>${t.toUpperCase()}</strong>.`);
+                }
+            });
+
+            // Imunidades
+            ALL_TYPES.forEach(t => {
+                if (teamVulnSummary[t].imm > 0) {
+                    insights.push(`🟢 <strong>Imunidade Vantajosa:</strong> O time possui ${teamVulnSummary[t].imm} integrante(s) totalmente imune(s) a <strong>${t.toUpperCase()}</strong>.`);
+                }
+            });
+
+            // Resumo de Cobertura
+            insights.push(`⚔️ <strong>Cobertura Ofensiva:</strong> Seu time causa dano Super Efetivo contra <strong>${coveredTypes.size} de 18</strong> tipos Pokémon.`);
+
+            insightsUl.innerHTML = insights.map(i => `<li>${i}</li>`).join('');
+        }
+
+        // =========================================================
+        // WIKIPEDIA MODAL (DETALHES COMPLETO DO POKÉMON)
+        // =========================================================
+        async function openWiki(id) {
+            const modal = document.getElementById('wikiModal');
+            modal.dataset.currentId = id;
+            modal.classList.add('active');
+            
+            document.getElementById('wName').textContent = "Carregando...";
+            document.getElementById('wDesc').textContent = "Consultando os arquivos da PokéDex...";
+            document.getElementById('wTypes').innerHTML = '';
+            document.getElementById('wStats').innerHTML = '';
+
+            try {
+                const [pokeData, speciesRes] = await Promise.all([
+                    getPokemonData(id),
+                    fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`).then(r => r.json()).catch(() => null)
+                ]);
+
+                document.getElementById('wName').textContent = pokeData.name;
+                document.getElementById('wNameText').textContent = pokeData.name;
+                document.getElementById('wGen').textContent = `Geração ${getGenById(id)}`;
+                document.getElementById('wImage').src = pokeData.image;
+                document.getElementById('wHeight').textContent = (pokeData.height / 10).toFixed(1);
+                document.getElementById('wWeight').textContent = (pokeData.weight / 10).toFixed(1);
+                document.getElementById('wAbility').textContent = pokeData.abilities[0] ? pokeData.abilities[0].replace('-', ' ') : 'N/A';
+
+                renderModalTeamButton(id);
+
+                // Badges de Tipos
+                document.getElementById('wTypes').innerHTML = pokeData.types.map(t => 
+                    `<span class="type-badge" style="background-color: ${typeColors[t] || '#777'}">${t}</span>`
+                ).join('');
+
+                // Estatísticas
+                const statsMap = [
+                    { name: 'HP', val: pokeData.stats.hp },
+                    { name: 'Ataque', val: pokeData.stats.attack },
+                    { name: 'Defesa', val: pokeData.stats.defense },
+                    { name: 'Sp. Atk', val: pokeData.stats.specialAttack },
+                    { name: 'Sp. Def', val: pokeData.stats.specialDefense },
+                    { name: 'Velocidade', val: pokeData.stats.speed }
+                ];
+
+                document.getElementById('wStats').innerHTML = statsMap.map(s => `
+                    <div class="stat-row">
+                        <span class="stat-name">${s.name}</span>
+                        <div class="stat-bar-container"><div class="stat-bar" style="width: ${(s.val/255)*100}%"></div></div>
+                        <span>${s.val}</span>
+                    </div>
+                `).join('');
+
+                // Descrição Flavor Text
+                if (speciesRes && speciesRes.flavor_text_entries) {
+                    const entry = speciesRes.flavor_text_entries.find(e => e.language.name === 'en');
+                    document.getElementById('wDesc').textContent = entry 
+                        ? entry.flavor_text.replace(/[\f\n\r]/g, ' ') 
+                        : "Sem dados ecológicos registrados.";
+                } else {
+                    document.getElementById('wDesc').textContent = "Dados ecológicos indisponíveis.";
+                }
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('wDesc').textContent = "Ocorreu um erro ao carregar os dados completos.";
+            }
+        }
+
+        function renderModalTeamButton(id) {
+            const container = document.getElementById('modalTeamBtnContainer');
+            const isTeam = myTeam.some(p => p.id === id);
+            container.innerHTML = `
+                <button class="btn-team-action ${isTeam ? 'btn-remove' : 'btn-add'}" style="padding: 10px; font-size: 1rem;" onclick="toggleTeamMember(${id})">
+                    ${isTeam ? '❌ Remover do Time' : '➕ Adicionar ao Time'}
+                </button>
+            `;
+        }
+
+        function closeWiki() {
+            document.getElementById('wikiModal').classList.remove('active');
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('wikiModal');
+            if (event.target === modal) { closeWiki(); }
+        };
+    </script>
+</body>
+</html>
